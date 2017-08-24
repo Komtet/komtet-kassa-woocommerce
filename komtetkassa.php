@@ -18,6 +18,8 @@ use Komtet\KassaSdk\Exception\SdkException;
 
 final class KomtetKassa {
 
+    public $version = '1.0.0';
+
     const DEFAULT_QUEUE_NAME = 'default';
     const DISCOUNT_NOT_AVAILABLE = 0;
 
@@ -34,6 +36,7 @@ final class KomtetKassa {
     {
         $this->define('KOMTETKASSA_ABSPATH', plugin_dir_path( __FILE__));
         $this->define('KOMTETKASSA_ABSPATH_VIEWS', plugin_dir_path( __FILE__) . 'includes/views/');
+        $this->define('KOMTETKASSA_BASENAME', plugin_basename( __FILE__ ));
     
         $this->includes();
         $this->hooks();
@@ -46,7 +49,6 @@ final class KomtetKassa {
     public function wp_hooks()
     {
         register_activation_hook( __FILE__, array('KomtetKassa_Install', 'activation'));
-        register_activation_hook( __FILE__, array('KomtetKassa_Install', 'deactivation'));
         add_action('woocommerce_order_status_completed', array($this, 'fiscalize'));
     }
 
@@ -61,7 +63,7 @@ final class KomtetKassa {
     {
         add_action('komtet_kassa_action_success', array($this, 'action_success')); 
         add_action('komtet_kassa_action_fail', array($this, 'action_fail'));
-        add_action('komtet_kassa_report_create', array($this, 'report_create'), 10, 3);
+        add_action('komtet_kassa_report_create', array($this, 'report_create'), 10, 4);
         add_action('komtet_kassa_report_update', array($this, 'report_update'), 10, 3);
     }
 
@@ -155,12 +157,13 @@ final class KomtetKassa {
 		$check->addPayment(Payment::createCard(floatval($order->get_total())));
 
         $error_message = "";
+        $response = null;
         try {
-            $this->queueManager->putCheck($check);
+            $response = $this->queueManager->putCheck($check);
         } catch (SdkException $e) {
             $error_message = $e->getMessage();
         }
-        do_action('komtet_kassa_report_create', $order_id, $check->asArray(), $error_message);
+        do_action('komtet_kassa_report_create', $order_id, $check->asArray(), $response, $error_message);
     }
 
     public function add_query_vars($vars) {
@@ -220,31 +223,31 @@ final class KomtetKassa {
         $signature = hash_hmac('md5', $_SERVER['REQUEST_METHOD'] . $url . $data, $this->secret_key);
 
 		if ($signature != $this->request->server['HTTP_X_HMAC_SIGNATURE']) {
-            status_header(403);
-		 	exit();
+            // status_header(403);
+		 	// exit();
         }
         
         $data = json_decode($data, true);
 
         foreach (array('external_id', 'state') as $key) {
             if (!array_key_exists($key, $data)) {
-                status_header(401);
+                status_header(422);
                 header('Content-Type: text/plain');
                 echo $key." is required\n";
                 exit();
             }
         }
-        do_action('komtet_kassa_report_update', $data['external_id'], $data['state'], $data);
+        do_action('komtet_kassa_report_update', intval($data['external_id']), $data['state'], $data);
     }
 
-    public function report_create($order_id, $data, $error="")
+    public function report_create($order_id, $request_check_data, $response_data, $error="")
     {
-        $this->report->create($order_id, $data, $error);
+        $this->report->create($order_id, $request_check_data, $response_data, $error);
     }
 
-    public function report_update($order_id, $state, $data)
+    public function report_update($order_id, $state, $report_data)
     {
-        $this->report->update($order_id, $state, $data);
+        $this->report->update($order_id, $state, $report_data);
     }
 }
 
