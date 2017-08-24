@@ -36,20 +36,39 @@ final class KomtetKassa {
         $this->define('KOMTETKASSA_ABSPATH_VIEWS', plugin_dir_path( __FILE__) . 'includes/views/');
     
         $this->includes();
+        $this->hooks();
         $this->wp_hooks();
+        $this->wp_endpoints();
+        $this->load_options();
+        $this->init();
     }
 
     public function wp_hooks()
     {
         register_activation_hook( __FILE__, array('KomtetKassa_Install', 'activation'));
         register_activation_hook( __FILE__, array('KomtetKassa_Install', 'deactivation'));
-
         add_action('woocommerce_order_status_completed', array($this, 'fiscalize'));
+    }
+
+    public function wp_endpoints()
+    {
+        add_filter('query_vars', array($this, 'add_query_vars'), 0);
+        add_action('init', array($this, 'add_endpoint'), 0);
+        add_action('parse_request', array($this, 'handle_requests'), 0);
+    }
+
+    public function hooks()
+    {
+        add_action('komtet_kassa_action_success', array($this, 'action_success')); 
+        add_action('komtet_kassa_action_fail', array($this, 'action_fail'));
+        add_action('komtet_kassa_report_create', array($this, 'report_create'), 10, 3);
+        add_action('komtet_kassa_report_update', array($this, 'report_update'), 10, 3);
     }
 
     public function includes()
     {
         require_once(KOMTETKASSA_ABSPATH . 'includes/class-komtetkassa-install.php');
+        require_once(KOMTETKASSA_ABSPATH . 'includes/class-komtetkassa-report.php');
         require_once(KOMTETKASSA_ABSPATH . 'includes/libs/komtet-kassa-php-sdk/autoload.php');
         
         if (is_admin()) {
@@ -75,12 +94,12 @@ final class KomtetKassa {
     public function init()
     {
         do_action('before_komtetkassa_init');
-        $this->load_options();
         $this->client = new Client($this->shop_id, $this->secret_key);
         $this->client->setHost($this->server_url);
         $this->queueManager = new QueueManager($this->client);
         $this->queueManager->registerQueue(self::DEFAULT_QUEUE_NAME, $this->queue_id);
-		$this->queueManager->setDefaultQueue(self::DEFAULT_QUEUE_NAME);
+        $this->queueManager->setDefaultQueue(self::DEFAULT_QUEUE_NAME);
+        $this->report = new KomtetKassa_Report();
         do_action('komtetkassa_init');
     }
 
@@ -97,8 +116,6 @@ final class KomtetKassa {
 
     public function fiscalize($order_id)
     {
-        $this->init();
-
         $order = wc_get_order($order_id);
         if (!$order) {
             return;
@@ -119,7 +136,7 @@ final class KomtetKassa {
                      $item->get_quantity(),
                      $item->get_total(),
                      $order->get_item_subtotal($item, false, true) - $order->get_item_total($item, false, true),
-                     new Vat(0)
+                     new Vat(Vat::RATE_NO)
                 ));
             }
             // shipping
@@ -130,18 +147,104 @@ final class KomtetKassa {
                     $item->get_quantity(),
                     floatval($item->get_total()),
                     self::DISCOUNT_NOT_AVAILABLE,
-                    new Vat(0)
+                    new Vat(Vat::RATE_NO)
                ));
             }
         }
 
 		$check->addPayment(Payment::createCard(floatval($order->get_total())));
 
+        $error_message = "";
         try {
             $this->queueManager->putCheck($check);
         } catch (SdkException $e) {
-            die($e->getMessage());
+            $error_message = $e->getMessage();
         }
+        do_action('komtet_kassa_report_create', $order_id, $check->asArray(), $error_message);
+    }
+
+    public function add_query_vars($vars) {
+        $vars[] = 'komtet-kassa';
+        return $vars;
+    }
+
+    public static function add_endpoint() {
+		add_rewrite_endpoint('komtet-kassa', EP_ALL);
+    }
+    
+    public function handle_requests() {
+        global $wp;
+
+        if (empty($wp->query_vars['komtet-kassa'])) {
+             return;
+        }
+
+        $komtet_kassa_action = strtolower(wc_clean( $wp->query_vars['komtet-kassa']));
+        do_action('komtet_kassa_action_' . $komtet_kassa_action);
+        die(-1);
+    }
+
+    public function action_success()
+    {
+        $this->handle_action('success');
+    }
+
+    public function action_fail()
+    {
+        $this->handle_action('fail');
+    }
+
+    public function handle_action($action) {
+        global $wp;
+
+        if (!array_key_exists('HTTP_X_HMAC_SIGNATURE', $_SERVER)) {
+            status_header(401);
+            exit();
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+            status_header(405);
+            header('Allow: POST');
+            exit();
+        }
+
+        if (empty($this->secret_key)) {
+			error_log('Unable to handle request: komtetkassa_secret_key is not defined');
+			status_header(500);
+        }
+
+        $scheme = array_key_exists('HTTPS', $_SERVER) && strtolower($_SERVER['HTTPS']) !== 'off' ? 'https' : 'http';
+        $url = sprintf('%s://%s%s', $scheme, $_SERVER['SERVER_NAME'], $_SERVER['REQUEST_URI']);
+        $data = file_get_contents('php://input');
+        
+        $signature = hash_hmac('md5', $_SERVER['REQUEST_METHOD'] . $url . $data, $this->secret_key);
+
+		if ($signature != $this->request->server['HTTP_X_HMAC_SIGNATURE']) {
+            status_header(403);
+		 	exit();
+        }
+        
+        $data = json_decode($data, true);
+
+        foreach (array('external_id', 'state') as $key) {
+            if (!array_key_exists($key, $data)) {
+                status_header(401);
+                header('Content-Type: text/plain');
+                echo $key." is required\n";
+                exit();
+            }
+        }
+        do_action('komtet_kassa_report_update', $data['external_id'], $data['state'], $data);
+    }
+
+    public function report_create($order_id, $data, $error="")
+    {
+        $this->report->create($order_id, $data, $error);
+    }
+
+    public function report_update($order_id, $state, $data)
+    {
+        $this->report->update($order_id, $state, $data);
     }
 }
 
