@@ -59,6 +59,6 @@ final class KomtetKassa_Admin {
     }
 
     public static function reports_page() {
-
+        KomtetKassa_AdminReports::out();
     }
 }
