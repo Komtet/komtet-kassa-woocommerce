@@ -52,15 +52,16 @@ class KomtetKassa_ReportsList extends WP_List_Table {
         echo '<div align="center">Список пуст</div>';
     }
 
-    public function column_default( $item, $column_name ) {
+    public function column_default($item, $column_name) {
         switch ( $column_name ) {
             case 'report_id':
             case 'order_id':
+                return $item[$column_name];
             case 'status':
                 $statuses = array(
-                    'new' => "Новая",
-                    'error' => "Ошибка",
-                    'done' => "Выполнена"
+                     'new' => "Новая",
+                     'error' => "Ошибка",
+                     'done' => "Выполнена"
                 );
                 return $statuses[$item[$column_name]];
             case 'created_at':

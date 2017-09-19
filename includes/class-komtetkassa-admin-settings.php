@@ -8,7 +8,8 @@ final class KomtetKassa_AdminSettings {
         'komtetkassa_secret_key' => 'string',
         'komtetkassa_should_print' => 'bool',
         'komtetkassa_queue_id' => 'string',
-        'komtetkassa_tax_system' => 'integer'
+        'komtetkassa_tax_system' => 'integer',
+        'komtetkassa_fiscalize_on_order_status' => 'string'
     );
 
     public static function out() {

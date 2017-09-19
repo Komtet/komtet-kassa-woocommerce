@@ -1,8 +1,9 @@
 <?php
 /*
-Plugin Name: KOMTET Kassa
+Plugin Name: WooCommerce - КОМТЕТ Касса
+Description: Фискализация платежей с помощью сервиса КОМТЕТ Касса для плагина WooCommerce
 Plugin URI: http://wordpress.org/plugins/komtetkassa/
-Author: Potalius
+Author: Komtet
 Version: 1.0.0
 Author URI: http://kassa.komtet.ru/
 */
@@ -26,18 +27,18 @@ final class KomtetKassa {
     private static $_instance = null;
 
     public static function instance() {
-		if (is_null(self::$_instance) ) {
-			self::$_instance = new self();
-		}
-		return self::$_instance;
-	}
+        if (is_null(self::$_instance) ) {
+            self::$_instance = new self();
+        }
+        return self::$_instance;
+    }
 
     public function __construct()
     {
         $this->define('KOMTETKASSA_ABSPATH', plugin_dir_path( __FILE__));
         $this->define('KOMTETKASSA_ABSPATH_VIEWS', plugin_dir_path( __FILE__) . 'includes/views/');
         $this->define('KOMTETKASSA_BASENAME', plugin_basename( __FILE__ ));
-    
+
         $this->includes();
         $this->hooks();
         $this->wp_hooks();
@@ -49,7 +50,7 @@ final class KomtetKassa {
     public function wp_hooks()
     {
         register_activation_hook( __FILE__, array('KomtetKassa_Install', 'activation'));
-        add_action('woocommerce_order_status_completed', array($this, 'fiscalize'));
+        add_action('woocommerce_order_status_' . get_option('komtetkassa_fiscalize_on_order_status'), array($this, 'fiscalize'));
     }
 
     public function wp_endpoints()
@@ -61,7 +62,7 @@ final class KomtetKassa {
 
     public function hooks()
     {
-        add_action('komtet_kassa_action_success', array($this, 'action_success')); 
+        add_action('komtet_kassa_action_success', array($this, 'action_success'));
         add_action('komtet_kassa_action_fail', array($this, 'action_fail'));
         add_action('komtet_kassa_report_create', array($this, 'report_create'), 10, 4);
         add_action('komtet_kassa_report_update', array($this, 'report_update'), 10, 3);
@@ -72,7 +73,7 @@ final class KomtetKassa {
         require_once(KOMTETKASSA_ABSPATH . 'includes/class-komtetkassa-install.php');
         require_once(KOMTETKASSA_ABSPATH . 'includes/class-komtetkassa-report.php');
         require_once(KOMTETKASSA_ABSPATH . 'includes/libs/komtet-kassa-php-sdk/autoload.php');
-        
+
         if (is_admin()) {
             require_once(KOMTETKASSA_ABSPATH . 'includes/class-komtetkassa-admin.php');
             add_action('init', array( 'KomtetKassa_Admin', 'init'));
@@ -81,9 +82,9 @@ final class KomtetKassa {
 
     private function define($name, $value)
     {
-		if (!defined( $name )) {
-			define( $name, $value );
-		}
+        if (!defined( $name )) {
+            define( $name, $value );
+        }
     }
 
     public function load_options() {
@@ -92,7 +93,7 @@ final class KomtetKassa {
         $this->secret_key = get_option('komtetkassa_secret_key');
         $this->queue_id = get_option('komtetkassa_queue_id');
     }
-    
+
     public function init()
     {
         do_action('before_komtetkassa_init');
@@ -130,14 +131,13 @@ final class KomtetKassa {
         $check->setShouldPrint(get_option('komtetkassa_should_print'));
 
         if (sizeof($order->get_items()) > 0 ) {
-            // products
             foreach ($order->get_items('line_item') as $item) {
                 $check->addPosition(new Position(
                      $item->get_name(),
-                     $order->get_item_total($item, false, true),
+                     $order->get_item_total($item, true, true),
                      $item->get_quantity(),
-                     $item->get_total(),
-                     $order->get_item_subtotal($item, false, true) - $order->get_item_total($item, false, true),
+                     $order->get_line_total($item, true, true),
+                     $order->get_line_subtotal($item, false, true) - $order->get_item_total($item, false, true),
                      new Vat(Vat::RATE_NO)
                 ));
             }
@@ -145,9 +145,9 @@ final class KomtetKassa {
             foreach ($order->get_items('shipping') as $item) {
                 $check->addPosition(new Position(
                     $item->get_name(),
-                    $order->get_item_total($item, false, true),
+                    $order->get_item_total($item, true, true),
                     $item->get_quantity(),
-                    floatval($item->get_total()),
+                    $order->get_line_total($item, true, true),
                     self::DISCOUNT_NOT_AVAILABLE,
                     new Vat(Vat::RATE_NO)
                ));
@@ -174,7 +174,7 @@ final class KomtetKassa {
     public static function add_endpoint() {
 		add_rewrite_endpoint('komtet-kassa', EP_ALL);
     }
-    
+
     public function handle_requests() {
         global $wp;
 
@@ -219,14 +219,14 @@ final class KomtetKassa {
         $scheme = array_key_exists('HTTPS', $_SERVER) && strtolower($_SERVER['HTTPS']) !== 'off' ? 'https' : 'http';
         $url = sprintf('%s://%s%s', $scheme, $_SERVER['SERVER_NAME'], $_SERVER['REQUEST_URI']);
         $data = file_get_contents('php://input');
-        
+
         $signature = hash_hmac('md5', $_SERVER['REQUEST_METHOD'] . $url . $data, $this->secret_key);
 
 		if ($signature != $this->request->server['HTTP_X_HMAC_SIGNATURE']) {
-            // status_header(403);
-		 	// exit();
+            status_header(403);
+		 	exit();
         }
-        
+
         $data = json_decode($data, true);
 
         foreach (array('external_id', 'state') as $key) {

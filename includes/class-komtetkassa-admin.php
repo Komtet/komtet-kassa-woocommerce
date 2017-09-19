@@ -21,7 +21,7 @@ final class KomtetKassa_Admin {
             array(__CLASS__, 'settings_page'),
             null,
             '56.2'
-        );        
+        );
     }
 
     public static function add_menu_settings() {

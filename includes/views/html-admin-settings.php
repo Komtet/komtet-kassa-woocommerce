@@ -61,6 +61,22 @@ if ( ! defined( 'ABSPATH' ) ) {
                 </select>
             </td>
         </tr>
+        <tr>
+            <th>
+                <label for="tax_system">Статус заказа при котором будет фискализирован чек:</label>
+            </th>
+            <td>
+                <select id="order_status" name="komtetkassa_fiscalize_on_order_status">
+                <?php
+                    $statuses = wc_get_order_statuses();
+                    foreach ($statuses as $status => $status_name): 
+                        $status = str_replace( 'wc-', '', $status);
+                    ?>
+					<option value="<?php echo esc_attr($status) ?>" <?php echo selected($status, get_option("komtetkassa_fiscalize_on_order_status"), false) ?>><?php echo esc_html($status_name) ?></option>
+                <?php endforeach; ?>
+				</select>
+            </td>
+        </tr>
         </table>
         <p class="submit">
             <input class="button button-primary" type="submit" value="Cохранить" name="submit">
