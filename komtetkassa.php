@@ -4,7 +4,7 @@ Plugin Name: WooCommerce - КОМТЕТ Касса
 Description: Фискализация платежей с помощью сервиса КОМТЕТ Касса для плагина WooCommerce
 Plugin URI: http://wordpress.org/plugins/komtetkassa/
 Author: Komtet
-Version: 1.0.0
+Version: 1.1.0
 Author URI: http://kassa.komtet.ru/
 */
 
@@ -19,7 +19,7 @@ use Komtet\KassaSdk\Exception\SdkException;
 
 final class KomtetKassa {
 
-    public $version = '1.0.0';
+    public $version = '1.1.0';
 
     const DEFAULT_QUEUE_NAME = 'default';
     const DISCOUNT_NOT_AVAILABLE = 0;
@@ -126,7 +126,14 @@ final class KomtetKassa {
 
         $tax_system = intval(get_option('komtetkassa_tax_system'));
 
-        $check = new Check($order_id, $order->get_billing_email(), Check::INTENT_SELL, $tax_system);
+        $clientContact = "";
+        if ($order->get_billing_email()) {
+            $clientContact = $order->get_billing_email();
+        } else {
+            $clientContact = $order->get_billing_phone();
+        }
+
+        $check = new Check($order_id, $clientContact, Check::INTENT_SELL, $tax_system);
 
         $check->setShouldPrint(get_option('komtetkassa_should_print'));
 
