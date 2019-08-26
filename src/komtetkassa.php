@@ -159,7 +159,8 @@ final class KomtetKassa {
             }
         }
 
-		$check->addPayment(Payment::createCard(floatval($order->get_total())));
+        $payment = new Payment(Payment::TYPE_CARD, floatval($order->get_total()));
+        $check->addPayment($payment);
 
         $error_message = "";
         $response = null;
