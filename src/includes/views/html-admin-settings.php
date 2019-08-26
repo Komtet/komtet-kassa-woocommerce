@@ -11,14 +11,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<table class="form-table">
         <tr>
             <th>
-                <label>API Url:</label>
-            </th>
-            <td>
-                <input type="text" name="komtetkassa_server_url" value="<?php echo get_option("komtetkassa_server_url") ?>" />
-            </td>
-        </tr>
-        <tr>
-            <th>
                 <label>Идентификатор магазина:</label>
             </th>
             <td>

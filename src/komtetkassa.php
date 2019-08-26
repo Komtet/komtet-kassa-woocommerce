@@ -88,7 +88,6 @@ final class KomtetKassa {
     }
 
     public function load_options() {
-        $this->server_url = get_option('komtetkassa_server_url');
         $this->shop_id = get_option('komtetkassa_shop_id');
         $this->secret_key = get_option('komtetkassa_secret_key');
         $this->queue_id = get_option('komtetkassa_queue_id');
@@ -98,7 +97,6 @@ final class KomtetKassa {
     {
         do_action('before_komtetkassa_init');
         $this->client = new Client($this->shop_id, $this->secret_key);
-        $this->client->setHost($this->server_url);
         $this->queueManager = new QueueManager($this->client);
         $this->queueManager->registerQueue(self::DEFAULT_QUEUE_NAME, $this->queue_id);
         $this->queueManager->setDefaultQueue(self::DEFAULT_QUEUE_NAME);

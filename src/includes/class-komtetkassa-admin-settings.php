@@ -3,7 +3,6 @@
 final class KomtetKassa_AdminSettings {
 
     private static $options = array(
-        'komtetkassa_server_url' => 'string',
         'komtetkassa_shop_id' => 'string',
         'komtetkassa_secret_key' => 'string',
         'komtetkassa_should_print' => 'bool',
