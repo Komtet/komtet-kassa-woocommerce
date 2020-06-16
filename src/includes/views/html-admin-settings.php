@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<table class="form-table">
         <tr>
             <th>
-                <label>Идентификатор магазина:</label>
+                <label>ID магазина:</label>
             </th>
             <td>
                 <input type="text" name="komtetkassa_shop_id" value="<?php echo get_option("komtetkassa_shop_id") ?>" />
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         </tr>
         <tr>
             <th>
-                <label>Секретный ключ:</label>
+                <label>Секретный ключ магазина:</label>
             </th>
             <td>
                 <input type="text" name="komtetkassa_secret_key" value="<?php echo get_option("komtetkassa_secret_key") ?>" />
@@ -35,7 +35,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         </tr>
         <tr>
             <th>
-                <label>Идентификатор очереди:</label>
+                <label>ID очереди:</label>
             </th>
             <td>
                 <input type="text" name="komtetkassa_queue_id" value="<?php echo get_option("komtetkassa_queue_id") ?>" />
