@@ -14,15 +14,14 @@ use Komtet\KassaSdk\Check;
 use Komtet\KassaSdk\Payment;
 use Komtet\KassaSdk\Position;
 use Komtet\KassaSdk\Vat;
+use Komtet\KassaSdk\TaxSystem;
 use Komtet\KassaSdk\Exception\ClientException;
 use Komtet\KassaSdk\Exception\SdkException;
 
 final class KomtetKassa {
 
-    public $version = '1.1.0';
-
+    public $version = '1.2.0';
     const DEFAULT_QUEUE_NAME = 'default';
-    const DISCOUNT_NOT_AVAILABLE = 0;
 
     private static $_instance = null;
 
@@ -106,12 +105,12 @@ final class KomtetKassa {
 
     public function taxSystems() {
 		return array(
-			Check::TS_COMMON => 'ОСН',
-			Check::TS_SIMPLIFIED_IN => 'УСН доход',
-			Check::TS_SIMPLIFIED_IN_OUT => 'УСН доход - расход',
-			Check::TS_UTOII => 'ЕНВД',
-			Check::TS_UST => 'ЕСН',
-			Check::TS_PATENT => 'Патент'
+			TaxSystem::COMMON => 'ОСН',
+			TaxSystem::SIMPLIFIED_IN => 'УСН доход',
+			TaxSystem::SIMPLIFIED_IN_OUT => 'УСН доход - расход',
+			TaxSystem::UTOII => 'ЕНВД',
+			TaxSystem::UST => 'ЕСН',
+			TaxSystem::PATENT => 'Патент'
 		);
 	}
 
@@ -142,7 +141,6 @@ final class KomtetKassa {
                      $order->get_item_total($item, true, true),
                      $item->get_quantity(),
                      $order->get_line_total($item, true, true),
-                     $order->get_line_subtotal($item, false, true) - $order->get_item_total($item, false, true),
                      new Vat(Vat::RATE_NO)
                 ));
             }
@@ -153,13 +151,16 @@ final class KomtetKassa {
                     $order->get_item_total($item, true, true),
                     $item->get_quantity(),
                     $order->get_line_total($item, true, true),
-                    self::DISCOUNT_NOT_AVAILABLE,
                     new Vat(Vat::RATE_NO)
                ));
             }
         }
 
-        $payment = new Payment(Payment::TYPE_CARD, floatval($order->get_total()));
+        if ($order->get_discount_total() > 0) {                                             // applying discount to order
+            $check->applyDiscount(round(floatval($order->get_discount_total()), 2));
+        }
+
+        $payment = new Payment(Payment::TYPE_CARD, floatval($order->get_total() - $order->get_discount_total()));
         $check->addPayment($payment);
 
         $error_message = "";
