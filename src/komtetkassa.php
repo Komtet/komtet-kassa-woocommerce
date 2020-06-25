@@ -156,12 +156,16 @@ final class KomtetKassa {
             }
         }
 
-        if ($order->get_discount_total() > 0) {                                             // applying discount to order
+        $discount = $order->get_subtotal() - $order->get_total();                               // считаем скидку как разницу между общей суммы по позициям и общей суммой заказа
+        if ($order->get_discount_total() > 0) {                                                 // если применена скидка к позициям
             $check->applyDiscount(round(floatval($order->get_discount_total()), 2));
+            $payment = new Payment(Payment::TYPE_CARD, round(floatval($order->get_total() - $order->get_discount_total())), 2);
+            $check->addPayment($payment);
+        } else if ($discount > 0) {                                                             // если применена общая скидка на весь заказ
+            $check->applyDiscount(round(floatval($discount), 2));
+            $payment = new Payment(Payment::TYPE_CARD, round(floatval($order->get_total())), 2);
+            $check->addPayment($payment);
         }
-
-        $payment = new Payment(Payment::TYPE_CARD, floatval($order->get_total() - $order->get_discount_total()));
-        $check->addPayment($payment);
 
         $error_message = "";
         $response = null;
