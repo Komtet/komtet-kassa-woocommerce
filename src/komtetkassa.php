@@ -165,6 +165,9 @@ final class KomtetKassa {
             $check->applyDiscount(round(floatval($discount), 2));
             $payment = new Payment(Payment::TYPE_CARD, round(floatval($order->get_total())), 2);
             $check->addPayment($payment);
+        } else {
+            $payment = new Payment(Payment::TYPE_CARD, round(floatval($order->get_total())), 2);
+            $check->addPayment($payment);
         }
 
         $error_message = "";
