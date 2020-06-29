@@ -146,6 +146,7 @@ final class KomtetKassa {
             }
             // shipping
             foreach ($order->get_items('shipping') as $item) {
+                if ($order->get_line_total($item, true, true) > 0) {
                 $check->addPosition(new Position(
                     $item->get_name(),
                     $order->get_item_total($item, true, true),
@@ -153,6 +154,7 @@ final class KomtetKassa {
                     $order->get_line_total($item, true, true),
                     new Vat(Vat::RATE_NO)
                ));
+                }
             }
         }
 
