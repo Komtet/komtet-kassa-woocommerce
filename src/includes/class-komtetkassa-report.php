@@ -126,7 +126,7 @@ final class KomtetKassa_Report {
             $wpdb->prefix . self::REPORT_TABLE_NAME,
             array(
                 'order_id' => $order_id,
-                'request_data' => json_encode($request_check_data),
+                'report_data' => json_encode($request_check_data),
                 'response_data' => $response_data != null ? json_encode($response_data) : null,
                 'error' => empty($error) ? null : $error
             ),

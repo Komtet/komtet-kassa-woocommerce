@@ -4,7 +4,7 @@ Plugin Name: WooCommerce - КОМТЕТ Касса
 Description: Фискализация платежей с помощью сервиса КОМТЕТ Касса для плагина WooCommerce
 Plugin URI: http://wordpress.org/plugins/komtetkassa/
 Author: Komtet
-Version: 1.1.0
+Version: 1.2.0
 Author URI: http://kassa.komtet.ru/
 */
 
@@ -14,12 +14,13 @@ use Komtet\KassaSdk\Check;
 use Komtet\KassaSdk\Payment;
 use Komtet\KassaSdk\Position;
 use Komtet\KassaSdk\Vat;
+use Komtet\KassaSdk\TaxSystem;
 use Komtet\KassaSdk\Exception\ClientException;
 use Komtet\KassaSdk\Exception\SdkException;
 
 final class KomtetKassa {
 
-    public $version = '1.1.0';
+    public $version = '1.2.0';
 
     const DEFAULT_QUEUE_NAME = 'default';
     const DISCOUNT_NOT_AVAILABLE = 0;
@@ -106,12 +107,12 @@ final class KomtetKassa {
 
     public function taxSystems() {
 		return array(
-			Check::TS_COMMON => 'ОСН',
-			Check::TS_SIMPLIFIED_IN => 'УСН доход',
-			Check::TS_SIMPLIFIED_IN_OUT => 'УСН доход - расход',
-			Check::TS_UTOII => 'ЕНВД',
-			Check::TS_UST => 'ЕСН',
-			Check::TS_PATENT => 'Патент'
+			TaxSystem::COMMON => 'ОСН',
+			TaxSystem::SIMPLIFIED_IN => 'УСН доход',
+			TaxSystem::SIMPLIFIED_IN_OUT => 'УСН доход - расход',
+			TaxSystem::UTOII => 'ЕНВД',
+			TaxSystem::UST => 'ЕСН',
+			TaxSystem::PATENT => 'Патент'
 		);
 	}
 
@@ -129,6 +130,7 @@ final class KomtetKassa {
             $clientContact = $order->get_billing_email();
         } else {
             $clientContact = $order->get_billing_phone();
+            $clientContact = mb_eregi_replace("[^0-9]", '', $clientContact);
         }
 
         $check = new Check($order_id, $clientContact, Check::INTENT_SELL, $tax_system);
