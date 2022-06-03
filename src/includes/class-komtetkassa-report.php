@@ -1,10 +1,11 @@
 <?php
 
-if ( ! class_exists( 'WP_List_Table' ) ) {
-	require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
+if (!class_exists('WP_List_Table')) {
+    require_once(ABSPATH . 'wp-admin/includes/class-wp-list-table.php');
 }
 
-class KomtetKassa_ReportsList extends WP_List_Table {
+class KomtetKassa_ReportsList extends WP_List_Table
+{
 
     public static $table_name;
 
@@ -20,13 +21,13 @@ class KomtetKassa_ReportsList extends WP_List_Table {
         self::$table_name = $wpdb->prefix . KomtetKassa_Report::REPORT_TABLE_NAME;
     }
 
-    public static function get_reports_data($per_page=5, $page_number=1)
+    public static function get_reports_data($per_page = 5, $page_number = 1)
     {
         global $wpdb;
 
         $sql = "SELECT * FROM " . self::$table_name;
 
-        if (!empty($_REQUEST['orderby']) ) {
+        if (!empty($_REQUEST['orderby'])) {
             $sql .= ' ORDER BY ' . esc_sql($_REQUEST['orderby']);
             $sql .= !empty($_REQUEST['order']) ? ' ' . esc_sql($_REQUEST['order']) : ' ASC';
         }
@@ -40,7 +41,8 @@ class KomtetKassa_ReportsList extends WP_List_Table {
         return $result;
     }
 
-    public static function record_count() {
+    public static function record_count()
+    {
         global $wpdb;
 
         $sql = "SELECT COUNT(*) FROM " . self::$table_name;
@@ -48,20 +50,22 @@ class KomtetKassa_ReportsList extends WP_List_Table {
         return $wpdb->get_var($sql);
     }
 
-    public function no_items() {
+    public function no_items()
+    {
         echo '<div align="center">Список пуст</div>';
     }
 
-    public function column_default($item, $column_name) {
-        switch ( $column_name ) {
+    public function column_default($item, $column_name)
+    {
+        switch ($column_name) {
             case 'report_id':
             case 'order_id':
                 return $item[$column_name];
             case 'status':
                 $statuses = array(
-                     'new' => "Новая",
-                     'error' => "Ошибка",
-                     'done' => "Выполнена"
+                    'new' => "Новая",
+                    'error' => "Ошибка",
+                    'done' => "Выполнена"
                 );
                 return $statuses[$item[$column_name]];
             case 'created_at':
@@ -75,7 +79,8 @@ class KomtetKassa_ReportsList extends WP_List_Table {
         }
     }
 
-    function get_columns() {
+    function get_columns()
+    {
         $columns = array(
             'report_id' => "#",
             'created_at' => "Задача создана",
@@ -93,7 +98,7 @@ class KomtetKassa_ReportsList extends WP_List_Table {
     {
         $columns = array(
             'report_id' => array('report_id', true),
-            'order_id' => array( 'order_id', false )
+            'order_id' => array('order_id', false)
         );
         return $columns;
     }
@@ -113,12 +118,13 @@ class KomtetKassa_ReportsList extends WP_List_Table {
 }
 
 
-final class KomtetKassa_Report {
+final class KomtetKassa_Report
+{
 
     const REPORT_TABLE_NAME = 'komtetkassa_reports';
 
 
-    public function create($order_id, $request_check_data, $response_data, $error="")
+    public function create($order_id, $request_check_data, $response_data, $error = "")
     {
         global $wpdb;
 
@@ -130,7 +136,7 @@ final class KomtetKassa_Report {
                 'response_data' => $response_data != null ? json_encode($response_data) : null,
                 'error' => empty($error) ? null : $error
             ),
-            array('%d', '%s', '%s')
+            array('%d', '%s', '%s', '%s')
         );
     }
 
@@ -140,7 +146,7 @@ final class KomtetKassa_Report {
 
         $table_name = $wpdb->prefix . self::REPORT_TABLE_NAME;
 
-        $report = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table_name} WHERE `order_id` = %d LIMIT 1;", $order_id ) );
+        $report = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE `order_id` = %d LIMIT 1;", $order_id));
 
         if ($report === null) {
             status_header(422);
@@ -149,7 +155,8 @@ final class KomtetKassa_Report {
             exit;
         }
 
-        $wpdb->update($table_name,
+        $wpdb->update(
+            $table_name,
             array(
                 'status' => $state,
                 'report_data' => json_encode($report_data),
@@ -159,5 +166,23 @@ final class KomtetKassa_Report {
             array('%s', '%s', '%s'),
             array('%d')
         );
+    }
+
+    public function get_check_calculation_method($order_id)
+    {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . self::REPORT_TABLE_NAME;
+
+        $order_report_data = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT report_data FROM {$table_name} WHERE `order_id` = %d and `error` IS NULL LIMIT 1;",
+                $order_id
+            )
+        );
+
+        // var_dump(json_decode($order_report_data->report_data, true)); die();
+        // return json_decode($order_report_data->report_data, true);
+        return json_decode($order_report_data->report_data, true)['positions'][0]['calculation_method'];
     }
 }
