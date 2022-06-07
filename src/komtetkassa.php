@@ -138,8 +138,6 @@ final class KomtetKassa
     # Собираем позиции для чека, если параметры соответствуют условиям, иначе прерываем процесс фискализации
     public function setPositionProps($order, $order_id, $position, $calculation_subject = CalculationSubject::PRODUCT)
     {
-        // var_dump($this->report->get_check_calculation_method($order_id));
-        // die();
         if ($order->get_status() == get_option('komtetkassa_fiscalize_pre_payment_full')) {
             $position->setCalculationSubject(CalculationSubject::PAYMENT);
             $position->setCalculationMethod(CalculationMethod::PRE_PAYMENT_FULL);
@@ -183,9 +181,6 @@ final class KomtetKassa
         if (!$order) {
             return;
         }
-
-        // var_dump($order->get_payment_method() == true);
-        // die();
 
         if (!in_array($order->get_payment_method(), get_option("komtet_kassa_payment_systems"))) {
             return;

@@ -181,8 +181,6 @@ final class KomtetKassa_Report
             )
         );
 
-        // var_dump(json_decode($order_report_data->report_data, true)); die();
-        // return json_decode($order_report_data->report_data, true);
         return json_decode($order_report_data->report_data, true)['positions'][0]['calculation_method'];
     }
 }
