@@ -201,7 +201,7 @@ final class KomtetKassa
             $clientContact = $order->get_billing_email();
         } else {
             $clientContact = $order->get_billing_phone();
-            $clientContact = mb_eregi_replace("[^0-9]", '', $clientContact);
+            $clientContact = mb_eregi_replace("[^+0-9]", '', $clientContact);
         }
 
         $check = new Check($order_id, $clientContact, Check::INTENT_SELL, $tax_system);
@@ -218,7 +218,13 @@ final class KomtetKassa
                     new Vat($product_vat_rate)
                 );
 
-                $position = self::setPositionProps($order, $order_id, $position);
+                $product = wc_get_product($item->get_product_id());
+
+                if ($komtet_kassa_product_type = $product->get_attribute('komtet_kassa_product_type')) {
+                    $position = self::setPositionProps($order, $order_id, $position, $calculation_subject = $komtet_kassa_product_type);
+                } else {
+                    $position = self::setPositionProps($order, $order_id, $position);
+                }
 
                 if ($position) {
                     $check->addPosition($position);

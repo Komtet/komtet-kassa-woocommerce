@@ -6,7 +6,7 @@ if (!defined('ABSPATH')) {
 
 ?>
 <h2>Настройки</h2>
-<div>
+<div style="width: 50%; float: left;">
     <form method="post" name="settings_form">
         <table class="form-table">
             <tr>
@@ -15,6 +15,7 @@ if (!defined('ABSPATH')) {
                 </th>
                 <td>
                     <input type="text" name="komtetkassa_shop_id" value="<?php echo get_option("komtetkassa_shop_id") ?>" />
+                    <p class="description">Скопируйте из раздела <a href="https://kassa.komtet.ru/manage/shops" target="_blank">Магазины</a></p>
                 </td>
             </tr>
             <tr>
@@ -23,14 +24,7 @@ if (!defined('ABSPATH')) {
                 </th>
                 <td>
                     <input type="text" name="komtetkassa_secret_key" value="<?php echo get_option("komtetkassa_secret_key") ?>" />
-                </td>
-            </tr>
-            <tr>
-                <th>
-                    <label>Печатать чек:</label>
-                </th>
-                <td>
-                    <input type="checkbox" name="komtetkassa_should_print" value="1" <?php echo get_option("komtetkassa_should_print") == "1" ? "checked" : "" ?> />
+                    <p class="description">Скопируйте из раздела <a href="https://kassa.komtet.ru/manage/shops" target="_blank">Магазины</a></p>
                 </td>
             </tr>
             <tr>
@@ -39,6 +33,15 @@ if (!defined('ABSPATH')) {
                 </th>
                 <td>
                     <input type="text" name="komtetkassa_queue_id" value="<?php echo get_option("komtetkassa_queue_id") ?>" />
+                    <p class="description">Скопируйте из раздела <a href="https://kassa.komtet.ru/manage/poses" target="_blank">Кассы</a></p>
+                </td>
+            </tr>
+            <tr>
+                <th>
+                    <label>Печатать чек:</label>
+                </th>
+                <td>
+                    <input type="checkbox" name="komtetkassa_should_print" value="1" <?php echo get_option("komtetkassa_should_print") == "1" ? "checked" : "" ?> />
                 </td>
             </tr>
             <tr>
@@ -133,8 +136,115 @@ if (!defined('ABSPATH')) {
                 </td>
             </tr>
         </table>
-        <p class="submit">
+        <p class=" submit">
             <input class="button button-primary" type="submit" value="Cохранить" name="submit">
         </p>
     </form>
+</div>
+
+<div style="width: 50%; float: right;">
+    <table>
+        <tr>
+            <th>
+                <details open>
+                    <summary style="max-width: 457px; text-align:center; font-size: 16px; cursor: pointer">Инструкция по изменению признака предмета расчёта:</summary>
+                    <div style="max-width: 457px; text-align:left;">
+                        <p>
+                            По 54-ФЗ, при продаже в кассовый чек должна попадать информация о признаке предмета расчета.
+                            По умолчанию, из Wordpress в Комтет Кассу этот признак передается как "Товар" для всех товаров из каталога.
+                        </p>
+
+                        <p>
+                            Если продаёте в своём онлайн-магазине не товары, а, например, услуги и.т.д., то вы можете указать это в настройках
+                            товара в Wordpress, чтобы в чек передавалась правильная информация. Это настраивается при помощи атрибутов.
+                        </p>
+                        <p>Порядок добавления атрибута к товару: </p>
+
+                        <ol>
+                            <li>В панеле управления Wordpress перейдите в <b>Товары</b>(Products)--><b>Все товары</b>(All Products);</li>
+                            <li>Выберите необходимый товар --> Нажмите "Изменить"</li>
+                            <li>В разделе "Данные товара" выберите "Артибуты" --> "Добавить";</li>
+                            <li>В качестве <b>имени аттрибута</b> задайте komtet_kassa_product_type</li>
+                            <li>В качестве <b>значения аттрибута </b> задайте одно значение из списка "Списка поддерживаемых признаков расчёта" ниже</li>
+                            <li>Нажмите <b>Сохранить</b>(Save);</li>
+                        </ol>
+
+                        <p style="max-width: 457px; font-size: 16px;">Список поддерживаемых признаков расчёта:</p>
+                        <table style="border-collapse: collapse;">
+                            <tr style="border-bottom: 1px solid #000;">
+                                <th style="text-align: left; font-size: 16px; padding-bottom: 15px;">Значение</th>
+                                <td style="text-align: left; font-size: 16px; padding-bottom: 15px;">Описание</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">product</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">Товар, за исключением подакцизного товара</td>
+                            </tr>
+                            <tr style=" border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">product_practical</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">Подакцизный товар</td>
+                            </tr>
+                            <tr style=" border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">work</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">Работа</td>
+                            </tr>
+                            <tr style=" border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">service</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">Услуга</td>
+                            </tr>
+                            <tr style=" border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">lottery_bet</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">
+                                    Прием денежных средств при реализации лотерейных билетов, электронных лотерейных билетов, приеме лотерейных ставок при осуществлении деятельности по проведению лотерей
+                                </td>
+                            </tr>
+                            <tr style=" border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">lottery_win</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">
+                                    Выплате денежных средств в виде выигрыша при осуществлении деятельности по проведению лотерей
+                                </td>
+                            </tr>
+                            <tr style=" border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">rid</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">
+                                    Предоставление прав на использование результатов интеллектуальной деятельности или средств индивидуализации «ПРЕДОСТАВЛЕНИЕ РИД» или «РИД»
+                                </td>
+                            </tr>
+                            <tr style=" border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">payment</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">
+                                    Об авансе, задатке, предоплате, кредите, взносе в счет оплаты, пени, штрафе, вознаграждении, бонусе и ином аналогичном предмете расчета
+                                </td>
+                            </tr>
+                            <tr style=" border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">commission</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">
+                                    Вознаграждении пользователя, являющегося платежным агентом (субагентом), банковским платежным агентом (субагентом), комиссионером, поверенным или иным агентом
+                                </td>
+                            </tr>
+                            <tr style=" border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">property_right</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">Передача имущественного права</td>
+                            </tr>
+                            <tr style=" border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">non_operating</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">Внереализационный доход</td>
+                            </tr>
+                            <tr style=" border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">insurance</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">Страховые взносы</td>
+                            </tr>
+                            <tr style=" border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">sales_tax</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">Торговый сбор</td>
+                            </tr>
+                            <tr style=" border-bottom: 1px solid #000;">
+                                <th style="padding: 15px 180px 15px 0px;">resort_fee</th>
+                                <td style="padding: 15px 0px 15px 0px;" ">Курортный сбор</td>
+                            </tr>
+                        </table>
+                    </div>
+                </details>
+            </th>
+        </tr>
+    </table>
 </div>
