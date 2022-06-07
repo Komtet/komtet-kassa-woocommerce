@@ -87,13 +87,8 @@ if (!defined('ABSPATH')) {
                 <td>
                     <select id="payment_systems" name="komtet_kassa_payment_systems[]" multiple>
                         <?php
-                        $payment_systems = WC()->payment_gateways->get_available_payment_gateways();
-                        foreach ($payment_systems as $payment_system_code => $payment_system_desc) :
-                            // var_dump(selected(in_array($payment_system_code, (get_option("komtet_kassa_payment_systems"))), false)); die();
-                            // $payment_system_code = [];
-                            // $list[$payment_system_code] = $payment_system_desc->get_title();
-                            // var_dump($payment_system_codes); die();
-                            // $payment_system_code = $payment_system_code;
+                            $payment_systems = WC()->payment_gateways->get_available_payment_gateways();
+                            foreach ($payment_systems as $payment_system_code => $payment_system_desc) :
                         ?>
                             <option value="<?php echo esc_attr($payment_system_code) ?>" <?php echo selected(in_array($payment_system_code, (get_option("komtet_kassa_payment_systems"))), true) ?>>
                                 <?php echo esc_html($payment_system_desc->get_title()) ?>

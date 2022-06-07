@@ -37,15 +37,7 @@ final class KomtetKassa_AdminSettings
             } else if ($type == 'integer') {
                 update_option($key, intval($value));
             } else if ($type == 'array') {
-                // var_dump($_POST[$key]); die();
-                // update_option($key, $value);
                 if (isset($_POST[$key]) && array_key_exists($key, $_POST)) {
-                    // $new_arr = array();
-                    // foreach ($_POST[$key] as $val) {
-                    //     $new_arr[] = sanitize_text_field(
-                    //         strip_tags(stripslashes($val))
-                    //     );
-                    // }
                     update_option($key, $_POST[$key]);
                 }
             }
