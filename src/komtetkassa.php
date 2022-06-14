@@ -4,31 +4,36 @@ Plugin Name: WooCommerce - КОМТЕТ Касса
 Description: Фискализация платежей с помощью сервиса КОМТЕТ Касса для плагина WooCommerce
 Plugin URI: http://wordpress.org/plugins/komtetkassa/
 Author: Komtet
-Version: 1.2.0
+Version: 1.4.0
 Author URI: http://kassa.komtet.ru/
 */
 
-use Komtet\KassaSdk\Client;
-use Komtet\KassaSdk\QueueManager;
-use Komtet\KassaSdk\Check;
-use Komtet\KassaSdk\Payment;
-use Komtet\KassaSdk\Position;
-use Komtet\KassaSdk\Vat;
-use Komtet\KassaSdk\TaxSystem;
+use Komtet\KassaSdk\v1\CalculationMethod;
+use Komtet\KassaSdk\v1\CalculationSubject;
+use Komtet\KassaSdk\v1\Check;
+use Komtet\KassaSdk\v1\Client;
+use Komtet\KassaSdk\v1\QueueManager;
+use Komtet\KassaSdk\v1\Payment;
+use Komtet\KassaSdk\v1\Position;
+use Komtet\KassaSdk\v1\TaxSystem;
+use Komtet\KassaSdk\v1\Vat;
+use Komtet\KassaSdk\Exception\ApiValidationException;
 use Komtet\KassaSdk\Exception\ClientException;
 use Komtet\KassaSdk\Exception\SdkException;
 
-final class KomtetKassa {
+final class KomtetKassa
+{
 
-    public $version = '1.2.0';
+    public $version = '1.4.0';
 
     const DEFAULT_QUEUE_NAME = 'default';
     const DISCOUNT_NOT_AVAILABLE = 0;
 
     private static $_instance = null;
 
-    public static function instance() {
-        if (is_null(self::$_instance) ) {
+    public static function instance()
+    {
+        if (is_null(self::$_instance)) {
             self::$_instance = new self();
         }
         return self::$_instance;
@@ -36,9 +41,9 @@ final class KomtetKassa {
 
     public function __construct()
     {
-        $this->define('KOMTETKASSA_ABSPATH', plugin_dir_path( __FILE__));
-        $this->define('KOMTETKASSA_ABSPATH_VIEWS', plugin_dir_path( __FILE__) . 'includes/views/');
-        $this->define('KOMTETKASSA_BASENAME', plugin_basename( __FILE__ ));
+        $this->define('KOMTETKASSA_ABSPATH', plugin_dir_path(__FILE__));
+        $this->define('KOMTETKASSA_ABSPATH_VIEWS', plugin_dir_path(__FILE__) . 'includes/views/');
+        $this->define('KOMTETKASSA_BASENAME', plugin_basename(__FILE__));
 
         $this->includes();
         $this->hooks();
@@ -50,8 +55,9 @@ final class KomtetKassa {
 
     public function wp_hooks()
     {
-        register_activation_hook( __FILE__, array('KomtetKassa_Install', 'activation'));
-        add_action('woocommerce_order_status_' . get_option('komtetkassa_fiscalize_on_order_status'), array($this, 'fiscalize'));
+        register_activation_hook(__FILE__, array('KomtetKassa_Install', 'activation'));
+        add_action('woocommerce_order_status_' . get_option('komtetkassa_fiscalize_pre_payment_full'), array($this, 'fiscalize'));
+        add_action('woocommerce_order_status_' . get_option('komtetkassa_fiscalize_full_payment'), array($this, 'fiscalize'));
     }
 
     public function wp_endpoints()
@@ -77,18 +83,19 @@ final class KomtetKassa {
 
         if (is_admin()) {
             require_once(KOMTETKASSA_ABSPATH . 'includes/class-komtetkassa-admin.php');
-            add_action('init', array( 'KomtetKassa_Admin', 'init'));
+            add_action('init', array('KomtetKassa_Admin', 'init'));
         }
     }
 
     private function define($name, $value)
     {
-        if (!defined( $name )) {
-            define( $name, $value );
+        if (!defined($name)) {
+            define($name, $value);
         }
     }
 
-    public function load_options() {
+    public function load_options()
+    {
         $this->shop_id = get_option('komtetkassa_shop_id');
         $this->secret_key = get_option('komtetkassa_secret_key');
         $this->queue_id = get_option('komtetkassa_queue_id');
@@ -105,92 +112,184 @@ final class KomtetKassa {
         do_action('komtetkassa_init');
     }
 
-    public function taxSystems() {
-		return array(
-			TaxSystem::COMMON => 'ОСН',
-			TaxSystem::SIMPLIFIED_IN => 'УСН доход',
-			TaxSystem::SIMPLIFIED_IN_OUT => 'УСН доход - расход',
-			TaxSystem::UTOII => 'ЕНВД',
-			TaxSystem::UST => 'ЕСН',
-			TaxSystem::PATENT => 'Патент'
-		);
-	}
+    public function taxSystems()
+    {
+        return array(
+            TaxSystem::COMMON => 'ОСН',
+            TaxSystem::SIMPLIFIED_IN => 'УСН доход',
+            TaxSystem::SIMPLIFIED_IN_OUT => 'УСН доход - расход',
+            TaxSystem::UST => 'ЕСХН',
+            TaxSystem::PATENT => 'Патент'
+        );
+    }
+
+    public function vatRates()
+    {
+        return array(
+            Vat::RATE_NO => 'Без НДС',
+            Vat::RATE_0 => 'НДС 0%',
+            Vat::RATE_10 => 'НДС 10%',
+            Vat::RATE_20 => 'НДС 20%',
+            Vat::RATE_110 => 'НДС 10/110%',
+            Vat::RATE_120 => 'НДС 20/120%'
+        );
+    }
+
+    # Собираем позиции для чека, если параметры соответствуют условиям, иначе прерываем процесс фискализации
+    public function setPositionProps($order, $order_id, $position, $calculation_subject = CalculationSubject::PRODUCT)
+    {
+        if ($order->get_status() == get_option('komtetkassa_fiscalize_pre_payment_full')) {
+            $position->setCalculationSubject(CalculationSubject::PAYMENT);
+            $position->setCalculationMethod(CalculationMethod::PRE_PAYMENT_FULL);
+
+            return $position;
+        } elseif ($order->get_status() == get_option('komtetkassa_fiscalize_full_payment')) {
+            if ((get_option('komtetkassa_fiscalize_pre_payment_full') == 'no_check') ||
+                ($this->report->get_check_calculation_method($order_id) == CalculationMethod::PRE_PAYMENT_FULL)
+            ) {
+                $position->setCalculationSubject($calculation_subject);
+                $position->setCalculationMethod(CalculationMethod::FULL_PAYMENT);
+
+                return $position;
+            }
+        } else {
+            return;
+        }
+    }
+
+    public function setPaymentProps($order)
+    {
+        if (
+            ($order->get_status() == get_option('komtetkassa_fiscalize_pre_payment_full')) ||
+            ($order->get_status() == get_option('komtetkassa_fiscalize_full_payment') and
+                (get_option('komtetkassa_fiscalize_pre_payment_full') == 'no_check'))
+        ) {
+            $payment = new Payment(Payment::TYPE_CARD, floatval($order->get_total()));
+        } elseif (
+            $order->get_status() == get_option('komtetkassa_fiscalize_full_payment')
+        ) {
+            $payment = new Payment(Payment::TYPE_PREPAYMENT, floatval($order->get_total()));
+        }
+
+        return $payment;
+    }
 
     public function fiscalize($order_id)
     {
         $order = wc_get_order($order_id);
+
         if (!$order) {
             return;
         }
 
+        if (!in_array($order->get_payment_method(), get_option("komtet_kassa_payment_systems"))) {
+            return;
+        }
+
         $tax_system = intval(get_option('komtetkassa_tax_system'));
+        $product_vat_rate = intval(get_option('komtetkassa_product_vat_rate'));
+        $delivery_vat_rate = intval(get_option('komtetkassa_delivery_vat_rate'));
 
         $clientContact = "";
+
         if ($order->get_billing_email()) {
             $clientContact = $order->get_billing_email();
         } else {
             $clientContact = $order->get_billing_phone();
-            $clientContact = mb_eregi_replace("[^0-9]", '', $clientContact);
+            $clientContact = mb_eregi_replace("[^+0-9]", '', $clientContact);
         }
 
         $check = new Check($order_id, $clientContact, Check::INTENT_SELL, $tax_system);
 
         $check->setShouldPrint(get_option('komtetkassa_should_print'));
 
-        if (sizeof($order->get_items()) > 0 ) {
+        if (sizeof($order->get_items()) > 0) {
             foreach ($order->get_items('line_item') as $item) {
-                $check->addPosition(new Position(
-                     $item->get_name(),
-                     $order->get_item_total($item, true, true),
-                     $item->get_quantity(),
-                     $order->get_line_total($item, true, true),
-                     $order->get_line_subtotal($item, false, true) - $order->get_item_total($item, false, true),
-                     new Vat(Vat::RATE_NO)
-                ));
-            }
-            // shipping
-            foreach ($order->get_items('shipping') as $item) {
-                $check->addPosition(new Position(
+                $position = new Position(
                     $item->get_name(),
                     $order->get_item_total($item, true, true),
                     $item->get_quantity(),
                     $order->get_line_total($item, true, true),
-                    self::DISCOUNT_NOT_AVAILABLE,
-                    new Vat(Vat::RATE_NO)
-               ));
+                    new Vat($product_vat_rate)
+                );
+
+                $product = wc_get_product($item->get_product_id());
+
+                if ($komtet_kassa_product_type = $product->get_attribute('komtet_kassa_product_type')) {
+                    $position = self::setPositionProps($order, $order_id, $position, $calculation_subject = $komtet_kassa_product_type);
+                } else {
+                    $position = self::setPositionProps($order, $order_id, $position);
+                }
+
+                if ($position) {
+                    $check->addPosition($position);
+                } else {
+                    return;
+                }
+            }
+
+            // shipping
+            foreach ($order->get_items('shipping') as $item) {
+                $deliveryPosition = new Position(
+                    $item->get_name(),
+                    $order->get_item_total($item, true, true),
+                    $item->get_quantity(),
+                    $order->get_line_total($item, true, true),
+                    new Vat($delivery_vat_rate)
+                );
+
+                $deliveryPosition = self::setPositionProps(
+                    $order,
+                    $order_id,
+                    $deliveryPosition,
+                    $calculation_subject = CalculationSubject::SERVICE
+                );
+
+                if ($deliveryPosition) {
+                    $check->addPosition($deliveryPosition);
+                } else {
+                    return;
+                }
             }
         }
 
-        $payment = new Payment(Payment::TYPE_CARD, floatval($order->get_total()));
+        $payment = self::setPaymentProps($order);
         $check->addPayment($payment);
 
         $error_message = "";
         $response = null;
         try {
             $response = $this->queueManager->putCheck($check);
+        } catch (ApiValidationException $e) {
+            $error_message = $e->getMessage() . " " . $e->getDescription();
         } catch (SdkException $e) {
+            $error_message = $e->getMessage();
+        } catch (ClientException $e) {
             $error_message = $e->getMessage();
         }
         do_action('komtet_kassa_report_create', $order_id, $check->asArray(), $response, $error_message);
     }
 
-    public function add_query_vars($vars) {
+    public function add_query_vars($vars)
+    {
         $vars[] = 'komtet-kassa';
         return $vars;
     }
 
-    public static function add_endpoint() {
-		add_rewrite_endpoint('komtet-kassa', EP_ALL);
+    public static function add_endpoint()
+    {
+        add_rewrite_endpoint('komtet-kassa', EP_ALL);
     }
 
-    public function handle_requests() {
+    public function handle_requests()
+    {
         global $wp;
 
         if (empty($wp->query_vars['komtet-kassa'])) {
-             return;
+            return;
         }
 
-        $komtet_kassa_action = strtolower(wc_clean( $wp->query_vars['komtet-kassa']));
+        $komtet_kassa_action = strtolower(wc_clean($wp->query_vars['komtet-kassa']));
         do_action('komtet_kassa_action_' . $komtet_kassa_action);
         die(-1);
     }
@@ -205,7 +304,8 @@ final class KomtetKassa {
         $this->handle_action('fail');
     }
 
-    public function handle_action($action) {
+    public function handle_action($action)
+    {
         global $wp;
 
         if (!array_key_exists('HTTP_X_HMAC_SIGNATURE', $_SERVER)) {
@@ -220,8 +320,8 @@ final class KomtetKassa {
         }
 
         if (empty($this->secret_key)) {
-			error_log('Unable to handle request: komtetkassa_secret_key is not defined');
-			status_header(500);
+            error_log('Unable to handle request: komtetkassa_secret_key is not defined');
+            status_header(500);
         }
 
         $scheme = array_key_exists('HTTPS', $_SERVER) && strtolower($_SERVER['HTTPS']) !== 'off' ? 'https' : 'http';
@@ -230,9 +330,9 @@ final class KomtetKassa {
 
         $signature = hash_hmac('md5', $_SERVER['REQUEST_METHOD'] . $url . $data, $this->secret_key);
 
-		if ($signature != $this->request->server['HTTP_X_HMAC_SIGNATURE']) {
+        if ($signature != $this->request->server['HTTP_X_HMAC_SIGNATURE']) {
             status_header(403);
-		 	exit();
+            exit();
         }
 
         $data = json_decode($data, true);
@@ -241,14 +341,14 @@ final class KomtetKassa {
             if (!array_key_exists($key, $data)) {
                 status_header(422);
                 header('Content-Type: text/plain');
-                echo $key." is required\n";
+                echo $key . " is required\n";
                 exit();
             }
         }
         do_action('komtet_kassa_report_update', intval($data['external_id']), $data['state'], $data);
     }
 
-    public function report_create($order_id, $request_check_data, $response_data, $error="")
+    public function report_create($order_id, $request_check_data, $response_data, $error = "")
     {
         $this->report->create($order_id, $request_check_data, $response_data, $error);
     }
@@ -259,8 +359,9 @@ final class KomtetKassa {
     }
 }
 
-function Komtet_Kassa() {
-	return KomtetKassa::instance();
+function Komtet_Kassa()
+{
+    return KomtetKassa::instance();
 }
 
 $GLOBALS['komtetkassa'] = Komtet_Kassa();

@@ -1,6 +1,7 @@
 <?php
 
-final class KomtetKassa_AdminSettings {
+final class KomtetKassa_AdminSettings
+{
 
     private static $options = array(
         'komtetkassa_shop_id' => 'string',
@@ -8,17 +9,23 @@ final class KomtetKassa_AdminSettings {
         'komtetkassa_should_print' => 'bool',
         'komtetkassa_queue_id' => 'string',
         'komtetkassa_tax_system' => 'integer',
-        'komtetkassa_fiscalize_on_order_status' => 'string'
+        'komtetkassa_product_vat_rate' => 'string',
+        'komtetkassa_delivery_vat_rate' => 'string',
+        'komtet_kassa_payment_systems' => 'array',
+        'komtetkassa_fiscalize_pre_payment_full' => 'string',
+        'komtetkassa_fiscalize_full_payment' => 'string'
     );
 
-    public static function out() {
+    public static function out()
+    {
         if (!empty($_POST)) {
             self::save();
         }
         include(KOMTETKASSA_ABSPATH_VIEWS . 'html-admin-settings.php');
     }
 
-    public static function save() {
+    public static function save()
+    {
 
         foreach (self::$options as $key => $type) {
             $value = filter_input(INPUT_POST, $key);
@@ -29,6 +36,10 @@ final class KomtetKassa_AdminSettings {
                 update_option($key, $value === "1" ? "1" : "0");
             } else if ($type == 'integer') {
                 update_option($key, intval($value));
+            } else if ($type == 'array') {
+                if (isset($_POST[$key]) && array_key_exists($key, $_POST)) {
+                    update_option($key, $_POST[$key]);
+                }
             }
         }
     }
