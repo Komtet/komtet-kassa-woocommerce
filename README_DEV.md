@@ -1,4 +1,4 @@
-# komtet_kassa_shopscript_delivery
+# komtet_kassa_woocommerce
 
 ## Запуск проекта
 

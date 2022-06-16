@@ -11,7 +11,7 @@ final class KomtetKassa_AdminSettings
         'komtetkassa_tax_system' => 'integer',
         'komtetkassa_product_vat_rate' => 'string',
         'komtetkassa_delivery_vat_rate' => 'string',
-        'komtet_kassa_payment_systems' => 'array',
+        'komtetkassa_payment_systems' => 'array',
         'komtetkassa_fiscalize_pre_payment_full' => 'string',
         'komtetkassa_fiscalize_full_payment' => 'string'
     );

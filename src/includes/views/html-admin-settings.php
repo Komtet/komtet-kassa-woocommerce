@@ -58,39 +58,44 @@ if (!defined('ABSPATH')) {
             </tr>
             <tr>
                 <th>
-                    <label for="komtetkassa_product_vat_rate">Ставка НДС для товаров:</label>
+                    <label for="product_vat_rate">Ставка НДС для товаров:</label>
                 </th>
                 <td>
-                    <select name="komtetkassa_product_vat_rate" id="vat_rate">
+                    <select name="komtetkassa_product_vat_rate" id="product_vat_rate">
                         <?php foreach (Komtet_Kassa()->vatRates() as $val => $name) : ?>
-                            <option value="<?php echo $val ?>" <?php echo get_option("komtetkassa_product_vat_rate") == $val ? "selected" : ""  ?>><?php echo $name ?></option>
+                            <option value="<?php echo strval($val) ?>" <?php echo get_option("komtetkassa_product_vat_rate") == strval($val) ? "selected" : "" ?>>
+                                <?php echo $name ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </td>
             </tr>
             <tr>
                 <th>
-                    <label for="komtetkassa_delivery_vat_rate">Ставка НДС для доставки:</label>
+                    <label for="delivery_vat_rate">Ставка НДС для доставки:</label>
                 </th>
                 <td>
-                    <select name="komtetkassa_delivery_vat_rate" id="vat_rate">
+                    <select name="komtetkassa_delivery_vat_rate" id="delivery_vat_rate">
                         <?php foreach (Komtet_Kassa()->vatRates() as $val => $name) : ?>
-                            <option value="<?php echo $val ?>" <?php echo get_option("komtetkassa_delivery_vat_rate") == $val ? "selected" : ""  ?>><?php echo $name ?></option>
+                            <option value="<?php echo strval($val) ?>"<?php echo get_option("komtetkassa_delivery_vat_rate") == strval($val) ? "selected" : "" ?>>
+                                <?php echo $name ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </td>
             </tr>
             <tr>
                 <th>
-                    <label for="komtet_kassa_payment_systems">Платёжные системы для которых будет происходить фискализация:</label>
+                    <label for="komtet_kassapayment_systems">Платёжные системы для которых будет происходить фискализация:</label>
                 </th>
                 <td>
-                    <select id="payment_systems" name="komtet_kassa_payment_systems[]" multiple>
+                    <select id="payment_systems" name="komtetkassa_payment_systems[]" multiple>
                         <?php
                             $payment_systems = WC()->payment_gateways->get_available_payment_gateways();
                             foreach ($payment_systems as $payment_system_code => $payment_system_desc) :
                         ?>
-                            <option value="<?php echo esc_attr($payment_system_code) ?>" <?php echo selected(in_array($payment_system_code, (get_option("komtet_kassa_payment_systems"))), true) ?>>
+                            <option value="<?php echo esc_attr($payment_system_code) ?>" 
+                            <?php echo selected(in_array($payment_system_code, get_option("komtetkassa_payment_systems") ? get_option("komtetkassa_payment_systems") : []), true) ?>>
                                 <?php echo esc_html($payment_system_desc->get_title()) ?>
                             </option>
                         <?php endforeach; ?>
