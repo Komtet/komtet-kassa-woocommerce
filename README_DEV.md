@@ -82,14 +82,15 @@ make start_web7
 ```sh
 make build
 ```
-* Запустить проект на php5.6
-```sh
-make start_web5
-```
 
 * Запустить проект на php7.2
 ```sh
 make start_web7
+```
+
+* Запустить проект на php8.2
+```sh
+make start_web8
 ```
 
 * Остановить проект

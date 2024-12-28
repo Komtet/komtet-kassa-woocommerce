@@ -15,12 +15,12 @@ services:
     ports:
       - "9906:3306"
 
-  web5:
+  web7:
     image: wc_web:last
     build:
       context: .
-      target: php5
-    container_name: wc_web5
+      target: php7
+    container_name: wc_web7
     depends_on:
       - db
     volumes:
@@ -32,12 +32,12 @@ services:
     stdin_open: true
     tty: true
 
-  web7:
+  web8:
     image: wc_web:last
     build:
       context: .
-      target: php7
-    container_name: wc_web7
+      target: php8
+    container_name: wc_web8
     depends_on:
       - db
     volumes:

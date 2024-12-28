@@ -128,8 +128,12 @@ final class KomtetKassa
         return array(
             Vat::RATE_NO => 'Без НДС',
             Vat::RATE_0 => 'НДС 0%',
+            Vat::RATE_5 => 'НДС 5%',
+            Vat::RATE_7 => 'НДС 7%',
             Vat::RATE_10 => 'НДС 10%',
             Vat::RATE_20 => 'НДС 20%',
+            Vat::RATE_105 => 'НДС 5/105%',
+            Vat::RATE_107 => 'НДС 7/107%',
             Vat::RATE_110 => 'НДС 10/110%',
             Vat::RATE_120 => 'НДС 20/120%'
         );
