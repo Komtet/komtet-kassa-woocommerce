@@ -1,11 +1,11 @@
-FROM php:5.6.38-apache as php5
-RUN docker-php-ext-install mysql
+FROM php:7.2-apache as php7
+RUN docker-php-ext-install mysqli
 
 WORKDIR /var/www/html
 # COPY php .
 
 
-FROM php:7.2-apache as php7
+FROM php:8.2-apache as php8
 RUN docker-php-ext-install mysqli
 
 WORKDIR /var/www/html
