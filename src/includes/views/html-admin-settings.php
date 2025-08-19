@@ -46,6 +46,14 @@ if (!defined('ABSPATH')) {
             </tr>
             <tr>
                 <th>
+                    <label>Признак расчета в сети «Интернет»:</label>
+                </th>
+                <td>
+                    <input type="checkbox" name="komtetkassa_internet" value="1" <?php echo get_option("komtetkassa_internet") == "1" ? "checked" : "" ?> />
+                </td>
+            </tr>
+            <tr>
+                <th>
                     <label for="tax_system">Система налогообложения:</label>
                 </th>
                 <td>
@@ -94,7 +102,7 @@ if (!defined('ABSPATH')) {
                             $payment_systems = WC()->payment_gateways->get_available_payment_gateways();
                             foreach ($payment_systems as $payment_system_code => $payment_system_desc) :
                         ?>
-                            <option value="<?php echo esc_attr($payment_system_code) ?>" 
+                            <option value="<?php echo esc_attr($payment_system_code) ?>"
                             <?php echo selected(in_array($payment_system_code, get_option("komtetkassa_payment_systems") ? get_option("komtetkassa_payment_systems") : []), true) ?>>
                                 <?php echo esc_html($payment_system_desc->get_title()) ?>
                             </option>
@@ -104,7 +112,7 @@ if (!defined('ABSPATH')) {
             </tr>
             <tr>
                 <th>
-                    <label for="pre_payment_full">Статус заказа при котором будет фискализирован чек полной предоплаты(pre_payment_full):</label>
+                    <label for="pre_payment_full">Статус заказа при котором будет фискализирован чек 100% предоплаты:</label>
                 </th>
                 <td>
                     <select id="order_status" name="komtetkassa_fiscalize_pre_payment_full">
@@ -121,7 +129,7 @@ if (!defined('ABSPATH')) {
             </tr>
             <tr>
                 <th>
-                    <label for="full_payment">Статус заказа при котором будет фискализирован чек полного расчёта(full_payment):</label>
+                    <label for="full_payment">Статус заказа при котором будет фискализирован чек полного расчёта:</label>
                 </th>
                 <td>
                     <select id="order_status" name="komtetkassa_fiscalize_full_payment">
