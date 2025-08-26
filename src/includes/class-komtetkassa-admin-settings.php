@@ -7,6 +7,7 @@ final class KomtetKassa_AdminSettings
         'komtetkassa_shop_id' => 'string',
         'komtetkassa_secret_key' => 'string',
         'komtetkassa_should_print' => 'bool',
+        'komtetkassa_internet' => 'bool',
         'komtetkassa_queue_id' => 'string',
         'komtetkassa_tax_system' => 'integer',
         'komtetkassa_product_vat_rate' => 'string',
