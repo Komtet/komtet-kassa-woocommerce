@@ -161,6 +161,28 @@ final class KomtetKassa {
         return $payment;
     }
 
+    private function getVatRate($item, $vat_setting) {
+        if ($vat_setting !== 'from_settings') {
+            return $vat_setting;
+        }
+
+        $vatRate = Vat::RATE_NO;
+        $taxes = $item->get_taxes()['total'] ?? [];
+
+        foreach ($taxes as $rate_id => $amount) {
+            if ($amount === '' || $amount === null) {
+                continue;
+            }
+
+            $rate = \WC_Tax::_get_tax_rate($rate_id);
+            if (!empty($rate['tax_rate'])) {
+                return (string)(int)$rate['tax_rate'];
+            }
+        }
+
+        return $vatRate;
+    }
+
     # В чеках аванса и предоплаты для ставок НДС 5%, 7%, 10% и 20% необходимо использовать
     # расчетную ставку 5/105%, 7/107%, 10/110% и 20/120%. Письмо ФНС России от 03.07.2018 N ЕД-4-20/12717
     private function getVatForCheckType($order, $vat_rate) {
@@ -212,12 +234,14 @@ final class KomtetKassa {
 
         if (sizeof($order->get_items()) > 0) {
             foreach ($order->get_items('line_item') as $item) {
+                $vat_rate = $this->getVatRate($item, $product_vat_rate);
+
                 $position = new Position(
                     $item->get_name(),
                     $order->get_item_total($item, true, true),
                     $item->get_quantity(),
                     $order->get_line_total($item, true, true),
-                    new Vat($this->getVatForCheckType($order, $product_vat_rate))
+                    new Vat($this->getVatForCheckType($order, $vat_rate))
                 );
 
                 $product = wc_get_product($item->get_product_id());
@@ -237,12 +261,14 @@ final class KomtetKassa {
 
             // shipping
             foreach ($order->get_items('shipping') as $item) {
+                $vat_rate = $this->getVatRate($item, $delivery_vat_rate);
+
                 $deliveryPosition = new Position(
                     $item->get_name(),
                     $order->get_item_total($item, true, true),
                     $item->get_quantity(),
                     $order->get_line_total($item, true, true),
-                    new Vat($this->getVatForCheckType($order, $delivery_vat_rate))
+                    new Vat($this->getVatForCheckType($order, $vat_rate))
                 );
 
                 $deliveryPosition = self::setPositionProps(
