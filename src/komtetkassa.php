@@ -21,8 +21,7 @@ use Komtet\KassaSdk\Exception\ApiValidationException;
 use Komtet\KassaSdk\Exception\ClientException;
 use Komtet\KassaSdk\Exception\SdkException;
 
-final class KomtetKassa
-{
+final class KomtetKassa {
 
     public $version = '1.6.0';
 
@@ -31,16 +30,14 @@ final class KomtetKassa
 
     private static $_instance = null;
 
-    public static function instance()
-    {
+    public static function instance() {
         if (is_null(self::$_instance)) {
             self::$_instance = new self();
         }
         return self::$_instance;
     }
 
-    public function __construct()
-    {
+    public function __construct() {
         $this->define('KOMTETKASSA_ABSPATH', plugin_dir_path(__FILE__));
         $this->define('KOMTETKASSA_ABSPATH_VIEWS', plugin_dir_path(__FILE__) . 'includes/views/');
         $this->define('KOMTETKASSA_BASENAME', plugin_basename(__FILE__));
@@ -53,30 +50,26 @@ final class KomtetKassa
         $this->init();
     }
 
-    public function wp_hooks()
-    {
+    public function wp_hooks() {
         register_activation_hook(__FILE__, array('KomtetKassa_Install', 'activation'));
         add_action('woocommerce_order_status_' . get_option('komtetkassa_fiscalize_pre_payment_full'), array($this, 'fiscalize'));
         add_action('woocommerce_order_status_' . get_option('komtetkassa_fiscalize_full_payment'), array($this, 'fiscalize'));
     }
 
-    public function wp_endpoints()
-    {
+    public function wp_endpoints() {
         add_filter('query_vars', array($this, 'add_query_vars'), 0);
         add_action('init', array($this, 'add_endpoint'), 0);
         add_action('parse_request', array($this, 'handle_requests'), 0);
     }
 
-    public function hooks()
-    {
+    public function hooks() {
         add_action('komtet_kassa_action_success', array($this, 'action_success'));
         add_action('komtet_kassa_action_fail', array($this, 'action_fail'));
         add_action('komtet_kassa_report_create', array($this, 'report_create'), 10, 4);
         add_action('komtet_kassa_report_update', array($this, 'report_update'), 10, 3);
     }
 
-    public function includes()
-    {
+    public function includes() {
         require_once(KOMTETKASSA_ABSPATH . 'includes/class-komtetkassa-install.php');
         require_once(KOMTETKASSA_ABSPATH . 'includes/class-komtetkassa-report.php');
         require_once(KOMTETKASSA_ABSPATH . 'includes/libs/komtet-kassa-php-sdk/autoload.php');
@@ -87,22 +80,19 @@ final class KomtetKassa
         }
     }
 
-    private function define($name, $value)
-    {
+    private function define($name, $value) {
         if (!defined($name)) {
             define($name, $value);
         }
     }
 
-    public function load_options()
-    {
+    public function load_options() {
         $this->shop_id = get_option('komtetkassa_shop_id');
         $this->secret_key = get_option('komtetkassa_secret_key');
         $this->queue_id = get_option('komtetkassa_queue_id');
     }
 
-    public function init()
-    {
+    public function init() {
         do_action('before_komtetkassa_init');
         $this->client = new Client($this->shop_id, $this->secret_key);
         $this->queueManager = new QueueManager($this->client);
@@ -112,8 +102,7 @@ final class KomtetKassa
         do_action('komtetkassa_init');
     }
 
-    public function taxSystems()
-    {
+    public function taxSystems() {
         return array(
             TaxSystem::COMMON => 'ОСН',
             TaxSystem::SIMPLIFIED_IN => 'УСН доход',
@@ -123,9 +112,9 @@ final class KomtetKassa
         );
     }
 
-    public function vatRates()
-    {
+    public function vatRates() {
         return array(
+            'from_settings' => 'НДС из настроек',
             Vat::RATE_NO => 'Без НДС',
             Vat::RATE_0 => 'НДС 0%',
             Vat::RATE_5 => 'НДС 5%',
@@ -136,8 +125,7 @@ final class KomtetKassa
     }
 
     # Собираем позиции для чека, если параметры соответствуют условиям, иначе прерываем процесс фискализации
-    public function setPositionProps($order, $order_id, $position, $calculation_subject = CalculationSubject::PRODUCT)
-    {
+    public function setPositionProps($order, $order_id, $position, $calculation_subject = CalculationSubject::PRODUCT) {
         if ($order->get_status() == get_option('komtetkassa_fiscalize_pre_payment_full')) {
             $position->setCalculationSubject(CalculationSubject::PAYMENT);
             $position->setCalculationMethod(CalculationMethod::PRE_PAYMENT_FULL);
@@ -157,8 +145,7 @@ final class KomtetKassa
         }
     }
 
-    public function setPaymentProps($order)
-    {
+    public function setPaymentProps($order) {
         if (
             ($order->get_status() == get_option('komtetkassa_fiscalize_pre_payment_full')) ||
             ($order->get_status() == get_option('komtetkassa_fiscalize_full_payment') and
@@ -176,8 +163,7 @@ final class KomtetKassa
 
     # В чеках аванса и предоплаты для ставок НДС 5%, 7%, 10% и 20% необходимо использовать
     # расчетную ставку 5/105%, 7/107%, 10/110% и 20/120%. Письмо ФНС России от 03.07.2018 N ЕД-4-20/12717
-    private function getVatForCheckType($order, $vat_rate)
-    {
+    private function getVatForCheckType($order, $vat_rate) {
         if ($order->get_status() == get_option('komtetkassa_fiscalize_pre_payment_full')) {
             switch ($vat_rate) {
                 case 5: return 105;
@@ -189,15 +175,19 @@ final class KomtetKassa
         return $vat_rate;
     }
 
-    public function fiscalize($order_id)
-    {
+    public function fiscalize($order_id) {
         $order = wc_get_order($order_id);
 
         if (!$order) {
             return;
         }
 
-        if (!in_array($order->get_payment_method(), get_option("komtetkassa_payment_systems"))) {
+        $payment_systems = get_option("komtetkassa_payment_systems", []);
+        if (!is_array($payment_systems)) {
+            $payment_systems = [];
+        }
+
+        if (!in_array($order->get_payment_method(), $payment_systems)) {
             return;
         }
 
@@ -287,19 +277,16 @@ final class KomtetKassa
         do_action('komtet_kassa_report_create', $order_id, $check->asArray(), $response, $error_message);
     }
 
-    public function add_query_vars($vars)
-    {
+    public function add_query_vars($vars) {
         $vars[] = 'komtet-kassa';
         return $vars;
     }
 
-    public static function add_endpoint()
-    {
+    public static function add_endpoint() {
         add_rewrite_endpoint('komtet-kassa', EP_ALL);
     }
 
-    public function handle_requests()
-    {
+    public function handle_requests() {
         global $wp;
 
         if (empty($wp->query_vars['komtet-kassa'])) {
@@ -311,18 +298,15 @@ final class KomtetKassa
         die(-1);
     }
 
-    public function action_success()
-    {
+    public function action_success() {
         $this->handle_action('success');
     }
 
-    public function action_fail()
-    {
+    public function action_fail() {
         $this->handle_action('fail');
     }
 
-    public function handle_action($action)
-    {
+    public function handle_action($action) {
         global $wp;
 
         if (!array_key_exists('HTTP_X_HMAC_SIGNATURE', $_SERVER)) {
@@ -365,19 +349,16 @@ final class KomtetKassa
         do_action('komtet_kassa_report_update', intval($data['external_id']), $data['state'], $data);
     }
 
-    public function report_create($order_id, $request_check_data, $response_data, $error = "")
-    {
+    public function report_create($order_id, $request_check_data, $response_data, $error = "") {
         $this->report->create($order_id, $request_check_data, $response_data, $error);
     }
 
-    public function report_update($order_id, $state, $report_data)
-    {
+    public function report_update($order_id, $state, $report_data) {
         $this->report->update($order_id, $state, $report_data);
     }
 }
 
-function Komtet_Kassa()
-{
+function Komtet_Kassa() {
     return KomtetKassa::instance();
 }
 
