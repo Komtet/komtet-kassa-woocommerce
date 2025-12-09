@@ -10,10 +10,10 @@ stop: ## Остановить все контейнеры
 	@docker-compose down
 
 start_web7: stop  ## Запустить контейнер
-	@docker-compose up -d web7
+	@docker-compose up web7
 
 start_web8: stop  ## Запустить контейнер
-	@docker-compose up -d web8
+	@docker-compose up web8
 
 update:  ## Установить/Обновить модуль
 	@rm -rf php/wp-content/plugins/komtetkassa/* &&\
