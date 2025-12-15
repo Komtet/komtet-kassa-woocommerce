@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
                 </th>
                 <td>
                     <input type="text" name="komtetkassa_shop_id" value="<?php echo get_option("komtetkassa_shop_id") ?>" />
-                    <p class="description">Скопируйте из раздела <a href="https://kassa.komtet.ru/manage/shops" target="_blank">Магазины</a></p>
+                    <p class="description">Скопируйте из раздела "Магазины" личного кабинета Комтет Кассы</p>
                 </td>
             </tr>
             <tr>
@@ -24,7 +24,7 @@ if (!defined('ABSPATH')) {
                 </th>
                 <td>
                     <input type="text" name="komtetkassa_secret_key" value="<?php echo get_option("komtetkassa_secret_key") ?>" />
-                    <p class="description">Скопируйте из раздела <a href="https://kassa.komtet.ru/manage/shops" target="_blank">Магазины</a></p>
+                    <p class="description">Скопируйте из раздела "Магазины" личного кабинета Комтет Кассы</p>
                 </td>
             </tr>
             <tr>
@@ -33,7 +33,7 @@ if (!defined('ABSPATH')) {
                 </th>
                 <td>
                     <input type="text" name="komtetkassa_queue_id" value="<?php echo get_option("komtetkassa_queue_id") ?>" />
-                    <p class="description">Скопируйте из раздела <a href="https://kassa.komtet.ru/manage/poses" target="_blank">Кассы</a></p>
+                    <p class="description">Скопируйте из раздела "Кассы" личного кабинета Комтет Кассы</p>
                 </td>
             </tr>
             <tr>

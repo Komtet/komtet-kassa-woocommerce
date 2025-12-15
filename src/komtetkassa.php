@@ -120,7 +120,8 @@ final class KomtetKassa {
             Vat::RATE_5 => 'НДС 5%',
             Vat::RATE_7 => 'НДС 7%',
             Vat::RATE_10 => 'НДС 10%',
-            Vat::RATE_20 => 'НДС 20%'
+            Vat::RATE_20 => 'НДС 20%',
+            Vat::RATE_22 => 'НДС 22%'
         );
     }
 

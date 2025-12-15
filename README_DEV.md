@@ -5,7 +5,7 @@
 * Склонируйте репозиторий включая подмодули для подтягивания SDK - git clone --recurse-submodules
 * Скачать установщик WordPress - https://wordpress.org/download/
 * Cоздать в корневом каталоге папку php
-* Распаковать архив WP CMS в папку php
+* Распаковать дистрибутив WordPress из архива в папку php
 * Добавить файл .htaccess в папку php со следующим содержимым:
 ```sh
 <FilesMatch "\.md5$">
@@ -55,6 +55,12 @@ AddDefaultCharset utf-8
 php_value date.timezone 'Europe/Moscow
 ```
 
+* Добавить следующую строку в файл wp-config.php для задания прямого способа
+* записи в файловую систему при установке плагинов:
+```sh
+define( 'FS_METHOD', 'direct' );
+```
+
 * Запустить сборку проекта
 ```sh
 make build
@@ -74,6 +80,9 @@ make start_web7
 Пароль: devpass
 БД: test_db
 ```
+
+* Панель администратора будет доступна по адресу: localhost:8110/wp-admin;
+
 * Перейдите в плагины и поставьте из маркета плагин WooCommerce
 
 ## Доступные комманды из Makefile
