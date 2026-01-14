@@ -4,7 +4,7 @@ Plugin Name: WooCommerce - КОМТЕТ Касса
 Description: Фискализация платежей с помощью сервиса КОМТЕТ Касса для плагина WooCommerce
 Plugin URI: http://wordpress.org/plugins/komtetkassa/
 Author: Komtet
-Version: 1.8.0
+Version: 1.8.1
 Author URI: http://kassa.komtet.ru/
 */
 
@@ -23,7 +23,7 @@ use Komtet\KassaSdk\Exception\SdkException;
 
 final class KomtetKassa {
 
-    public $version = '1.8.0';
+    public $version = '1.8.1';
 
     const DEFAULT_QUEUE_NAME = 'default';
     const DISCOUNT_NOT_AVAILABLE = 0;
@@ -186,16 +186,23 @@ final class KomtetKassa {
 
     # В чеках аванса и предоплаты для ставок НДС 5%, 7%, 10% и 20% необходимо использовать
     # расчетную ставку 5/105%, 7/107%, 10/110% и 20/120%. Письмо ФНС России от 03.07.2018 N ЕД-4-20/12717
-    private function getVatForCheckType($order, $vat_rate) {
-        if ($order->get_status() == get_option('komtetkassa_fiscalize_pre_payment_full')) {
-            switch ($vat_rate) {
-                case 5: return 105;
-                case 7: return 107;
-                case 10: return 110;
-                case 20: return 120;
-            }
+    private function mapVatRateByStatus($vat_rate, $order_status) {
+        $prepayment_status = get_option('komtetkassa_fiscalize_pre_payment_full');
+
+        // Если это не предоплата, то возвращаем ставку как есть
+        if ($order_status !== $prepayment_status) {
+            return $vat_rate;
         }
-        return $vat_rate;
+
+        $map = [
+            5  => 105,
+            7  => 107,
+            10 => 110,
+            20 => 120,
+            22 => 122
+        ];
+
+        return isset($map[$vat_rate]) ? $map[$vat_rate] : $vat_rate;
     }
 
     public function fiscalize($order_id) {
@@ -242,7 +249,7 @@ final class KomtetKassa {
                     $order->get_item_total($item, true, true),
                     $item->get_quantity(),
                     $order->get_line_total($item, true, true),
-                    new Vat($this->getVatForCheckType($order, $vat_rate))
+                    new Vat($this->mapVatRateByStatus($vat_rate, $order->get_status()))
                 );
 
                 $product = wc_get_product($item->get_product_id());
@@ -269,7 +276,7 @@ final class KomtetKassa {
                     $order->get_item_total($item, true, true),
                     $item->get_quantity(),
                     $order->get_line_total($item, true, true),
-                    new Vat($this->getVatForCheckType($order, $vat_rate))
+                    new Vat($this->mapVatRateByStatus($vat_rate, $order->get_status()))
                 );
 
                 $deliveryPosition = self::setPositionProps(
